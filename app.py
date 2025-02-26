@@ -57,6 +57,8 @@ if uploaded_file:
 submit1 = st.button("Tell Me About the Resume")
 submit3 = st.button("Percentage Match")
 submit4 = st.button("Personalized Learning Path")
+submit5 = st.button("Optimize LinkedIn Profile")
+
 
 input_prompt1 = """
 You are an experienced HR with tech expertise in Data Science, Full Stack, Web Development, Big Data Engineering, DevOps, or Data Analysis.
@@ -82,6 +84,11 @@ focusing on the skills, topics, and tools specified in the provided job descript
 - Tips for real-world applications.
 """
 
+input_prompt5 = """
+You are a career consultant specializing in LinkedIn profile optimization. 
+Analyze the provided resume and job description, then suggest improvements for the LinkedIn headline, summary, skills, and endorsements.
+"""
+
 if submit1:
     if uploaded_file:
         pdf_content = input_pdf_setup(uploaded_file)
@@ -105,6 +112,15 @@ elif submit4:
         pdf_content = input_pdf_setup(uploaded_file)
         response = get_gemini_response(input_prompt4, pdf_content, input_text)
         st.subheader("The Response is:")
+        st.write(response)
+    else:
+        st.warning("Please upload a resume.")
+
+elif submit5:
+    if uploaded_file:
+        pdf_content = input_pdf_setup(uploaded_file)
+        response = get_gemini_response(input_prompt5, pdf_content, input_text)
+        st.subheader("LinkedIn Optimization Suggestions:")
         st.write(response)
     else:
         st.warning("Please upload a resume.")
