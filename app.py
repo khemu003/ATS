@@ -11,8 +11,6 @@ import google.generativeai as genai
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from streamlit_extras.add_vertical_space import add_vertical_space
-from streamlit_extras.stylable_container import stylable_container
 
 # Load environment variables
 load_dotenv()
