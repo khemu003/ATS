@@ -3,12 +3,16 @@ import streamlit as st
 import os
 import io
 import base64
+import speech_recognition as sr
+import pyttsx3
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from streamlit_extras.add_vertical_space import add_vertical_space
+from streamlit_extras.stylable_container import stylable_container
 
 # Load environment variables
 load_dotenv()
@@ -50,6 +54,26 @@ def get_gemini_response(prompt):
         st.error(f"API call failed: {str(e)}")
         return f"Error: {str(e)}"
 
+# Initialize speech recognizer and text-to-speech engine
+recognizer = sr.Recognizer()
+engine = pyttsx3.init()
+
+def voice_assistant():
+    with sr.Microphone() as source:
+        st.write("Listening...")
+        try:
+            audio = recognizer.listen(source)
+            user_query = recognizer.recognize_google(audio)
+            st.write(f"You said: {user_query}")
+            response = get_gemini_response(user_query)
+            st.write(response)
+            engine.say(response)
+            engine.runAndWait()
+        except sr.UnknownValueError:
+            st.write("Sorry, I couldn't understand what you said.")
+        except sr.RequestError:
+            st.write("Could not request results, please check your connection.")
+
 st.set_page_config(page_title="A5 ATS Resume Expert")
 st.header("MY A5 PERSONAL ATS")
 
@@ -65,6 +89,14 @@ st.button("Percentage Match")
 st.button("Personalized Learning Path")
 st.button("Generate Updated Resume")
 st.button("Generate 30 Interview Questions and Answers")
+
+# Voice Assistant Button with Icon
+col1, col2 = st.columns([0.1, 0.9])
+with col1:
+    if st.button("🎤", key="voice_button"):
+        voice_assistant()
+with col2:
+    st.write("Talk to AI")
 
 # New dropdown for personalized learning path duration
 learning_path_duration = st.selectbox("Select Personalized Learning Path Duration:", ["3 Months", "6 Months", "9 Months", "12 Months"])
