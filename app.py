@@ -3,6 +3,8 @@ import streamlit as st
 import os
 import io
 import base64
+import speech_recognition as sr
+import pyttsx3
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
@@ -50,6 +52,26 @@ def get_gemini_response(prompt):
         st.error(f"API call failed: {str(e)}")
         return f"Error: {str(e)}"
 
+# Initialize speech recognizer and text-to-speech engine
+recognizer = sr.Recognizer()
+engine = pyttsx3.init()
+
+def voice_assistant():
+    with sr.Microphone() as source:
+        st.write("Listening...")
+        try:
+            audio = recognizer.listen(source)
+            user_query = recognizer.recognize_google(audio)
+            st.write(f"You said: {user_query}")
+            response = get_gemini_response(user_query)
+            st.write(response)
+            engine.say(response)
+            engine.runAndWait()
+        except sr.UnknownValueError:
+            st.write("Sorry, I couldn't understand what you said.")
+        except sr.RequestError:
+            st.write("Could not request results, please check your connection.")
+
 st.set_page_config(page_title="A5 ATS Resume Expert")
 st.header("MY A5 PERSONAL ATS")
 
@@ -66,16 +88,9 @@ st.button("Personalized Learning Path")
 st.button("Generate Updated Resume")
 st.button("Generate 30 Interview Questions and Answers")
 
-# New "Assist the AI" button
-if st.button("Assist the AI"):
-    st.write("AI assistance is now active! Provide inputs to improve its response.")
-
-# New "Talk to AI" button
-if st.button("Talk to AI"):
-    user_input = st.text_input("Ask AI anything:")
-    if user_input:
-        response = get_gemini_response(user_input)
-        st.write(response)
+# Voice Assistant Button
+if st.button("Voice Command Assistant"):
+    voice_assistant()
 
 # New dropdown for personalized learning path duration
 learning_path_duration = st.selectbox("Select Personalized Learning Path Duration:", ["3 Months", "6 Months", "9 Months", "12 Months"])

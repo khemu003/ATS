@@ -4,3 +4,4 @@ python-dotenv
 pdf2image
 pypdf2
 reportlab
+speechrecognition
