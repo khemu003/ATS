@@ -54,7 +54,7 @@ def get_gemini_response(prompt):
 
 # Initialize speech recognizer and text-to-speech engine
 recognizer = sr.Recognizer()
-engine = pyttsx3.init()
+engine = pyttsx3.init(driverName='sapi5')
 
 def voice_assistant():
     with sr.Microphone() as source:
