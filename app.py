@@ -6,6 +6,9 @@ import base64
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # Load environment variables
 load_dotenv()
@@ -17,46 +20,6 @@ if not API_KEY:
     st.stop()
 
 genai.configure(api_key=API_KEY)
-
-def get_gemini_response(input_text, pdf_content, prompt):
-    """Generate a response using Google Gemini API."""
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content([input_text, pdf_content[0], prompt])
-    return response.text
-
-def input_pdf_setup(uploaded_file):
-    """Convert first page of uploaded PDF to an image and encode as base64."""
-    if uploaded_file is not None:
-        uploaded_file.seek(0)  # Reset file pointer
-        images = pdf2image.convert_from_bytes(uploaded_file.read())  # Removed poppler_path
-        first_page = images[0]
-
-        # Convert image to bytes
-        img_byte_arr = io.BytesIO()
-        first_page.save(img_byte_arr, format='JPEG')
-        img_byte_arr = img_byte_arr.getvalue()
-
-        pdf_parts = [{
-            "mime_type": "image/jpeg",
-            "data": base64.b64encode(img_byte_arr).decode()  # Encode to base64
-        }]
-        return pdf_parts
-    else:
-        raise FileNotFoundError("No File Uploaded")
-
-# Streamlit App
-st.set_page_config(page_title="A5 ATS Resume Expert")
-st.header("MY A5 PERSONAL ATS")
-
-input_text = st.text_area("Job Description:", key="input")
-uploaded_file = st.file_uploader("Upload your resume (PDF)...", type=['pdf'])
-
-if uploaded_file:
-    st.success("PDF Uploaded Successfully.")
-
-submit1 = st.button("Tell Me About the Resume")
-submit3 = st.button("Percentage Match")
-submit4 = st.button("Personalized Learning Path")
 
 input_prompt1 = """
 You are an experienced HR with tech expertise in Data Science, Full Stack, Web Development, Big Data Engineering, DevOps, or Data Analysis.
@@ -72,39 +35,95 @@ Your task is to evaluate the resume against the job description. Provide:
 3. Final evaluation.
 """
 
-input_prompt4 = """
-You are an experienced learning coach and technical expert. Create a 6-month personalized study plan for an individual aiming to excel in [Job Role], 
-focusing on the skills, topics, and tools specified in the provided job description. Ensure the study plan includes:
-- A list of topics and tools for each month.
-- Suggested resources (books, online courses, documentation).
-- Recommended practical exercises or projects.
-- Periodic assessments or milestones.
-- Tips for real-world applications.
-"""
+def get_gemini_response(prompt):
+    """Generate a response using Google Gemini API."""
+    if not prompt.strip():
+        return "Error: Prompt is empty. Please provide a valid prompt."
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content([prompt, f"Add unique variations each time this prompt is called: {os.urandom(8).hex()}"])
+        if hasattr(response, 'text') and response.text:
+            return response.text
+        else:
+            return "Error: No valid response received from Gemini API."
+    except Exception as e:
+        st.error(f"API call failed: {str(e)}")
+        return f"Error: {str(e)}"
 
-if submit1:
-    if uploaded_file:
-        pdf_content = input_pdf_setup(uploaded_file)
-        response = get_gemini_response(input_prompt1, pdf_content, input_text)
-        st.subheader("The Response is:")
-        st.write(response)
-    else:
-        st.warning("Please upload a resume.")
+st.set_page_config(page_title="A5 ATS Resume Expert")
+st.header("MY A5 PERSONAL ATS")
 
-elif submit3:
-    if uploaded_file:
-        pdf_content = input_pdf_setup(uploaded_file)
-        response = get_gemini_response(input_prompt3, pdf_content, input_text)
-        st.subheader("The Response is:")
-        st.write(response)
-    else:
-        st.warning("Please upload a resume.")
+input_text = st.text_area("Job Description:", key="input")
+uploaded_file = st.file_uploader("Upload your resume (PDF)...", type=['pdf'])
 
-elif submit4:
-    if uploaded_file:
-        pdf_content = input_pdf_setup(uploaded_file)
-        response = get_gemini_response(input_prompt4, pdf_content, input_text)
-        st.subheader("The Response is:")
-        st.write(response)
-    else:
-        st.warning("Please upload a resume.")
+if uploaded_file:
+    st.success("PDF Uploaded Successfully.")
+
+# Always visible buttons
+st.button("Tell Me About the Resume")
+st.button("Percentage Match")
+st.button("Personalized Learning Path")
+st.button("Generate Updated Resume")
+st.button("Generate 30 Interview Questions and Answers")
+
+# New "Assist the AI" button
+if st.button("Assist the AI"):
+    st.write("AI assistance is now active! Provide inputs to improve its response.")
+
+# New dropdown for personalized learning path duration
+learning_path_duration = st.selectbox("Select Personalized Learning Path Duration:", ["3 Months", "6 Months", "9 Months", "12 Months"])
+
+# Dropdown for selecting interview question category
+question_category = st.selectbox("Select Question Category:", ["Python", "Machine Learning", "Deep Learning", "Docker", "Data Warehousing", "Data Pipelines", "Data Modeling", "SQL"])
+
+# Show only one button based on selected category
+if question_category == "Python":
+    if st.button("30 Python Interview Questions"):
+        response = get_gemini_response("Generate 30 Python interview questions and detailed answers")
+        if not response.startswith("Error"):
+            st.subheader("Python Interview Questions and Answers:")
+            st.write(response)
+            st.download_button("Download Python Questions", response, f"python_questions_{os.urandom(4).hex()}.txt")
+        else:
+            st.error(response)
+
+elif question_category == "Machine Learning":
+    if st.button("30 Machine Learning Interview Questions"):
+        response = get_gemini_response("Generate 30 Machine Learning interview questions and detailed answers")
+        if not response.startswith("Error"):
+            st.subheader("Machine Learning Interview Questions and Answers:")
+            st.write(response)
+            st.download_button("Download ML Questions", response, f"ml_questions_{os.urandom(4).hex()}.txt")
+        else:
+            st.error(response)
+
+elif question_category == "Deep Learning":
+    if st.button("30 Deep Learning Interview Questions"):
+        response = get_gemini_response("Generate 30 Deep Learning interview questions and detailed answers")
+        if not response.startswith("Error"):
+            st.subheader("Deep Learning Interview Questions and Answers:")
+            st.write(response)
+            st.download_button("Download DL Questions", response, f"dl_questions_{os.urandom(4).hex()}.txt")
+        else:
+            st.error(response)
+
+elif question_category == "Docker":
+    if st.button("30 Docker Interview Questions"):
+        response = get_gemini_response("Generate 30 Docker interview questions and detailed answers")
+        if not response.startswith("Error"):
+            st.subheader("Docker Interview Questions and Answers:")
+            st.write(response)
+            st.download_button("Download Docker Questions", response, f"docker_questions_{os.urandom(4).hex()}.txt")
+        else:
+            st.error(response)
+
+# Data Engineering questions
+elif question_category in ["Data Warehousing", "Data Pipelines", "Data Modeling", "SQL"]:
+    if st.button(f"30 {question_category} Interview Questions"):
+        response = get_gemini_response(f"Generate 30 {question_category} interview questions and detailed answers")
+        if not response.startswith("Error"):
+            st.subheader(f"{question_category} Interview Questions and Answers:")
+            st.write(response)
+            st.download_button(f"Download {question_category} Questions", response, f"{question_category.lower().replace(' ', '_')}_questions_{os.urandom(4).hex()}.txt")
+        else:
+            st.error(response)
