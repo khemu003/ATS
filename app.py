@@ -70,6 +70,13 @@ st.button("Generate 30 Interview Questions and Answers")
 if st.button("Assist the AI"):
     st.write("AI assistance is now active! Provide inputs to improve its response.")
 
+# New "Talk to AI" button
+if st.button("Talk to AI"):
+    user_input = st.text_input("Ask AI anything:")
+    if user_input:
+        response = get_gemini_response(user_input)
+        st.write(response)
+
 # New dropdown for personalized learning path duration
 learning_path_duration = st.selectbox("Select Personalized Learning Path Duration:", ["3 Months", "6 Months", "9 Months", "12 Months"])
 
