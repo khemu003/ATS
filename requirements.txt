@@ -7,3 +7,4 @@ reportlab
 pyaudio
 speechrecognition
 pyttsx3
+streamlit_extras

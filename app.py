@@ -5,13 +5,14 @@ import io
 import base64
 import speech_recognition as sr
 import pyttsx3
-import platform
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from streamlit_extras.add_vertical_space import add_vertical_space
+from streamlit_extras.stylable_container import stylable_container
 
 # Load environment variables
 load_dotenv()
@@ -55,22 +56,7 @@ def get_gemini_response(prompt):
 
 # Initialize speech recognizer and text-to-speech engine
 recognizer = sr.Recognizer()
-
-def initialize_tts():
-    try:
-        system_platform = platform.system()
-        if system_platform == "Windows":
-            return pyttsx3.init(driverName='sapi5')
-        elif system_platform == "Darwin":  # macOS
-            return pyttsx3.init(driverName='nsss')
-        else:  # Linux
-            return pyttsx3.init(driverName='espeak')
-    except Exception as e:
-        st.warning(f"Text-to-Speech Engine Error: {str(e)}")
-        return None
-
-voice_assistant = initialize_tts()
-engine = pyttsx3.init(driverName='sapi5')
+engine = pyttsx3.init()
 
 def voice_assistant():
     with sr.Microphone() as source:
@@ -81,11 +67,8 @@ def voice_assistant():
             st.write(f"You said: {user_query}")
             response = get_gemini_response(user_query)
             st.write(response)
-            if engine:
-                engine.say(response)
-                engine.runAndWait()
-            else:
-                st.warning("Text-to-Speech not available, displaying text only.")
+            engine.say(response)
+            engine.runAndWait()
         except sr.UnknownValueError:
             st.write("Sorry, I couldn't understand what you said.")
         except sr.RequestError:
@@ -107,9 +90,13 @@ st.button("Personalized Learning Path")
 st.button("Generate Updated Resume")
 st.button("Generate 30 Interview Questions and Answers")
 
-# Voice Assistant Button
-if st.button("Voice Command Assistant"):
-    voice_assistant()
+# Voice Assistant Button with Icon
+col1, col2 = st.columns([0.1, 0.9])
+with col1:
+    if st.button("🎤", key="voice_button"):
+        voice_assistant()
+with col2:
+    st.write("Talk to AI")
 
 # New dropdown for personalized learning path duration
 learning_path_duration = st.selectbox("Select Personalized Learning Path Duration:", ["3 Months", "6 Months", "9 Months", "12 Months"])
@@ -158,3 +145,13 @@ elif question_category == "Docker":
         else:
             st.error(response)
 
+# Data Engineering questions
+elif question_category in ["Data Warehousing", "Data Pipelines", "Data Modeling", "SQL"]:
+    if st.button(f"30 {question_category} Interview Questions"):
+        response = get_gemini_response(f"Generate 30 {question_category} interview questions and detailed answers")
+        if not response.startswith("Error"):
+            st.subheader(f"{question_category} Interview Questions and Answers:")
+            st.write(response)
+            st.download_button(f"Download {question_category} Questions", response, f"{question_category.lower().replace(' ', '_')}_questions_{os.urandom(4).hex()}.txt")
+        else:
+            st.error(response)
