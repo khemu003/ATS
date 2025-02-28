@@ -5,3 +5,4 @@ pdf2image
 pypdf2
 reportlab
 speechrecognition
+pyttsx3
