@@ -3,16 +3,13 @@ import streamlit as st
 import os
 import io
 import base64
-import speech_recognition as sr
-import pyttsx3
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
+from PyPDF2 import PdfReader
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from streamlit_extras.add_vertical_space import add_vertical_space
-from streamlit_extras.stylable_container import stylable_container
 
 # Load environment variables
 load_dotenv()
@@ -24,20 +21,6 @@ if not API_KEY:
     st.stop()
 
 genai.configure(api_key=API_KEY)
-
-input_prompt1 = """
-You are an experienced HR with tech expertise in Data Science, Full Stack, Web Development, Big Data Engineering, DevOps, or Data Analysis.
-Your task is to review the provided resume against the job description for these roles.
-Please evaluate the candidate's profile, highlighting strengths and weaknesses in relation to the specified job role.
-"""
-
-input_prompt3 = """
-You are a skilled ATS (Applicant Tracking System) scanner with expertise in Data Science, Full Stack, Web Development, Big Data Engineering, DevOps, and Data Analysis.
-Your task is to evaluate the resume against the job description. Provide:
-1. The percentage match.
-2. Keywords missing.
-3. Final evaluation.
-"""
 
 def get_gemini_response(prompt):
     """Generate a response using Google Gemini API."""
@@ -54,104 +37,104 @@ def get_gemini_response(prompt):
         st.error(f"API call failed: {str(e)}")
         return f"Error: {str(e)}"
 
-# Initialize speech recognizer and text-to-speech engine
-recognizer = sr.Recognizer()
-engine = pyttsx3.init()
+st.set_page_config(page_title="A5 ATS Resume Expert", layout='wide')
 
-def voice_assistant():
-    with sr.Microphone() as source:
-        st.write("Listening...")
-        try:
-            audio = recognizer.listen(source)
-            user_query = recognizer.recognize_google(audio)
-            st.write(f"You said: {user_query}")
-            response = get_gemini_response(user_query)
-            st.write(response)
-            engine.say(response)
-            engine.runAndWait()
-        except sr.UnknownValueError:
-            st.write("Sorry, I couldn't understand what you said.")
-        except sr.RequestError:
-            st.write("Could not request results, please check your connection.")
+# Header with a fresh style
+st.markdown("""
+    <h1 style='text-align: center; color: #4CAF50;'>MY A5 PERSONAL ATS</h1>
+    <hr style='border: 1px solid #4CAF50;'>
+""", unsafe_allow_html=True)
 
-st.set_page_config(page_title="A5 ATS Resume Expert")
-st.header("MY A5 PERSONAL ATS")
+# Input section with better layout
+col1, col2 = st.columns(2)
 
-input_text = st.text_area("Job Description:", key="input")
-uploaded_file = st.file_uploader("Upload your resume (PDF)...", type=['pdf'])
-
-if uploaded_file:
-    st.success("PDF Uploaded Successfully.")
-
-# Always visible buttons
-st.button("Tell Me About the Resume")
-st.button("Percentage Match")
-st.button("Personalized Learning Path")
-st.button("Generate Updated Resume")
-st.button("Generate 30 Interview Questions and Answers")
-
-# Voice Assistant Button with Icon
-col1, col2 = st.columns([0.1, 0.9])
 with col1:
-    if st.button("🎤", key="voice_button"):
-        voice_assistant()
+    input_text = st.text_area("📋 Job Description:", key="input", height=150)
+
+uploaded_file = None
+resume_text = ""
 with col2:
-    st.write("Talk to AI")
+    uploaded_file = st.file_uploader("📄 Upload your resume (PDF)...", type=['pdf'])
+    if uploaded_file:
+        st.success("✅ PDF Uploaded Successfully.")
+        try:
+            reader = PdfReader(uploaded_file)
+            for page in reader.pages:
+                if page and page.extract_text():
+                    resume_text += page.extract_text()
+        except Exception as e:
+            st.error(f"❌ Failed to read PDF: {str(e)}")
 
-# New dropdown for personalized learning path duration
-learning_path_duration = st.selectbox("Select Personalized Learning Path Duration:", ["3 Months", "6 Months", "9 Months", "12 Months"])
+# Always visible buttons styled
+st.markdown("---")
+st.markdown("<h3 style='text-align: center;'>🛠️ Quick Actions</h3>", unsafe_allow_html=True)
 
-# Dropdown for selecting interview question category
-question_category = st.selectbox("Select Question Category:", ["Python", "Machine Learning", "Deep Learning", "Docker", "Data Warehousing", "Data Pipelines", "Data Modeling", "SQL"])
-
-# Show only one button based on selected category
-if question_category == "Python":
-    if st.button("30 Python Interview Questions"):
-        response = get_gemini_response("Generate 30 Python interview questions and detailed answers")
-        if not response.startswith("Error"):
-            st.subheader("Python Interview Questions and Answers:")
+action_cols = st.columns(6)
+with action_cols[0]:
+    if st.button("📖 Tell Me About the Resume"):
+        if resume_text:
+            response = get_gemini_response(f"Please review the following resume and provide a detailed evaluation: {resume_text}")
             st.write(response)
-            st.download_button("Download Python Questions", response, f"python_questions_{os.urandom(4).hex()}.txt")
+            st.download_button("💾 Download Resume Evaluation", response, "resume_evaluation.txt")
         else:
-            st.error(response)
+            st.warning("⚠️ Please upload a valid resume first.")
 
-elif question_category == "Machine Learning":
-    if st.button("30 Machine Learning Interview Questions"):
-        response = get_gemini_response("Generate 30 Machine Learning interview questions and detailed answers")
-        if not response.startswith("Error"):
-            st.subheader("Machine Learning Interview Questions and Answers:")
+with action_cols[1]:
+    if st.button("📊 Percentage Match"):
+        if resume_text and input_text:
+            response = get_gemini_response(f"Evaluate the following resume against this job description and provide a percentage match:\n\nJob Description:\n{input_text}\n\nResume:\n{resume_text}")
             st.write(response)
-            st.download_button("Download ML Questions", response, f"ml_questions_{os.urandom(4).hex()}.txt")
+            st.download_button("💾 Download Percentage Match", response, "percentage_match.txt")
         else:
-            st.error(response)
+            st.warning("⚠️ Please upload a resume and provide a job description.")
 
-elif question_category == "Deep Learning":
-    if st.button("30 Deep Learning Interview Questions"):
-        response = get_gemini_response("Generate 30 Deep Learning interview questions and detailed answers")
-        if not response.startswith("Error"):
-            st.subheader("Deep Learning Interview Questions and Answers:")
-            st.write(response)
-            st.download_button("Download DL Questions", response, f"dl_questions_{os.urandom(4).hex()}.txt")
+with action_cols[2]:
+    learning_path_duration = st.selectbox("📆 Select Personalized Learning Path Duration:", ["3 Months", "6 Months", "9 Months", "12 Months"])
+    if st.button("🎓 Personalized Learning Path"):
+        if resume_text and input_text and learning_path_duration:
+            response = get_gemini_response(f"Create a detailed and structured personalized learning path for a duration of {learning_path_duration} based on the resume and job description:\n\nJob Description:\n{input_text}\n\nResume:\n{resume_text}")
+            if response and "Error" not in response:
+                st.write(response)
+                pdf_buffer = io.BytesIO()
+                doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
+                styles = getSampleStyleSheet()
+                styles.add(ParagraphStyle(name='Custom', spaceAfter=12))
+                story = [Paragraph(f"Personalized Learning Path ({learning_path_duration})", styles['Title']), Spacer(1, 12)]
+                for line in response.split('\n'):
+                    story.append(Paragraph(line, styles['Custom']))
+                    story.append(Spacer(1, 12))
+                doc.build(story)
+                st.download_button(f"💾 Download Learning Path PDF", pdf_buffer.getvalue(), f"learning_path_{learning_path_duration.replace(' ', '_').lower()}.pdf", "application/pdf")
+            else:
+                st.warning("⚠️ No content received for the learning path. Please try again.")
         else:
-            st.error(response)
+            st.warning("⚠️ Please upload a resume and provide a job description.")
 
-elif question_category == "Docker":
-    if st.button("30 Docker Interview Questions"):
-        response = get_gemini_response("Generate 30 Docker interview questions and detailed answers")
-        if not response.startswith("Error"):
-            st.subheader("Docker Interview Questions and Answers:")
+with action_cols[3]:
+    if st.button("📝 Generate Updated Resume"):
+        if resume_text:
+            response = get_gemini_response(f"Suggest improvements and generate an updated resume for this candidate:\n{resume_text}")
             st.write(response)
-            st.download_button("Download Docker Questions", response, f"docker_questions_{os.urandom(4).hex()}.txt")
+            st.download_button("💾 Download Updated Resume", response, "updated_resume.txt")
         else:
-            st.error(response)
+            st.warning("⚠️ Please upload a resume first.")
 
-# Data Engineering questions
-elif question_category in ["Data Warehousing", "Data Pipelines", "Data Modeling", "SQL"]:
-    if st.button(f"30 {question_category} Interview Questions"):
-        response = get_gemini_response(f"Generate 30 {question_category} interview questions and detailed answers")
-        if not response.startswith("Error"):
-            st.subheader(f"{question_category} Interview Questions and Answers:")
+with action_cols[4]:
+    if st.button("❓ Generate 30 Interview Questions and Answers"):
+        if resume_text:
+            response = get_gemini_response("Generate 30 technical interview questions and their detailed answers.")
             st.write(response)
-            st.download_button(f"Download {question_category} Questions", response, f"{question_category.lower().replace(' ', '_')}_questions_{os.urandom(4).hex()}.txt")
+            st.download_button("💾 Download Interview Questions", response, "interview_questions.txt")
         else:
-            st.error(response)
+            st.warning("⚠️ Please upload a resume first.")
+
+with action_cols[5]:
+    if st.button("🧠 Skill Gap Analysis"):
+        if resume_text and input_text:
+            response = get_gemini_response(f"Identify skill gaps between the resume and the job description:\n\nJob Description:\n{input_text}\n\nResume:\n{resume_text}")
+            st.write(response)
+            st.download_button("💾 Download Skill Gap Analysis", response, "skill_gap_analysis.txt")
+        else:
+            st.warning("⚠️ Please upload a resume and provide a job description.")
+
+st.markdown("<hr style='border: 1px solid #4CAF50;'>", unsafe_allow_html=True)
